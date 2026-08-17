@@ -18,3 +18,11 @@ function MeeksRadio.getTrack(trackId)
     if type(track.sound) ~= "string" or tonumber(track.duration) == nil then return nil end
     return track
 end
+
+MeeksRadio.Catalog["meeks_test_signal"] = {
+    id = "meeks_test_signal",
+    title = "Meeks Radio Test Signal",
+    artist = "Meeks Protocol",
+    sound = "MeeksRadio_TestSignal",
+    duration = 8,
+}
