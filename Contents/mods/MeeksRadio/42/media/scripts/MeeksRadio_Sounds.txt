@@ -1,5 +1,29 @@
 module MeeksRadio
 {
+    sound MeeksRadio_TestSignal
+    {
+        category = Music,
+        is3D = false,
+        loop = false,
+        clip
+        {
+            file = media/sound/MeeksRadio/meeks_radio_test_signal.ogg,
+            volume = 0.75,
+        }
+    }
+
+    sound MeeksRadio_GhostedZ3R0NULL
+    {
+        category = Music,
+        is3D = false,
+        loop = false,
+        clip
+        {
+            file = media/sound/MeeksRadio/ghosted_z3r0null.ogg,
+            volume = 0.75,
+        }
+    }
+
     /*
     sound MeeksRadio_MySong
     {
@@ -12,19 +36,4 @@ module MeeksRadio
         }
     }
     */
-}
-
-module MeeksRadio
-{
-    sound MeeksRadio_TestSignal
-    {
-        category = Music,
-        is3D = false,
-        loop = false,
-        clip
-        {
-            file = media/sound/MeeksRadio/meeks_radio_test_signal.ogg,
-            volume = 0.75,
-        }
-    }
 }
