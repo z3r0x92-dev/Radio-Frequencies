@@ -4,3 +4,4 @@
 Thumbs.db
 Contents/mods/MeeksRadio/media/sound/MeeksRadio/*.ogg
 !Contents/mods/MeeksRadio/media/sound/MeeksRadio/.gitkeep
+__pycache__/
