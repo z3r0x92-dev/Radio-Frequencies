@@ -3,6 +3,7 @@ require "MeeksRadio/Catalog"
 
 local Config = MeeksRadio.Config
 local state = { stations = {}, djs = {}, cooldowns = {} }
+local lastTick = 0
 
 local function nowSeconds()
     return getTimestamp and getTimestamp() or os.time()
@@ -20,6 +21,10 @@ end
 
 local function isDj(player)
     return isAdmin(player) or state.djs[string.lower(username(player))] == true
+end
+
+local function saveState()
+    if ModData and ModData.transmit then ModData.transmit("MeeksRadioState") end
 end
 
 local function stationState(frequency)
@@ -40,6 +45,10 @@ local function stationState(frequency)
 end
 
 local function publicStation(s)
+    local queue = {}
+    for index, entry in ipairs(s.queue) do
+        queue[index] = { id = entry.id, queuedBy = entry.queuedBy }
+    end
     return {
         frequency = s.frequency,
         locked = s.locked,
@@ -47,6 +56,7 @@ local function publicStation(s)
         startedAt = s.startedAt,
         endsAt = s.endsAt,
         queueLength = #s.queue,
+        queue = queue,
         revision = s.revision,
         serverTime = nowSeconds(),
     }
@@ -55,7 +65,9 @@ end
 local function broadcast(s)
     s.revision = s.revision + 1
     sendServerCommand(Config.module, "stationState", publicStation(s))
+    saveState()
 end
+
 
 local function startNext(s)
     local entry = table.remove(s.queue, 1)
@@ -72,6 +84,19 @@ end
 
 local function reject(player, message)
     sendServerCommand(player, Config.module, "error", { message = message })
+end
+
+local function handleRemove(player, args)
+    if not isDj(player) then return reject(player, "DJ permission required") end
+    local s = stationState(args.frequency)
+    local index = math.floor(tonumber(args.index) or 0)
+    local entry = s and s.queue[index] or nil
+    if not entry then return reject(player, "Unknown queue entry") end
+    if not isAdmin(player) and string.lower(entry.queuedBy or "") ~= string.lower(username(player)) then
+        return reject(player, "You may only remove your own queued tracks")
+    end
+    table.remove(s.queue, index)
+    broadcast(s)
 end
 
 local function rateLimited(player)
@@ -100,6 +125,7 @@ local function handleAdmin(player, command, args)
         if target == "" then return reject(player, "Username required") end
         state.djs[target] = command == "grant" or nil
         sendServerCommand(Config.module, "djChanged", { username = target, approved = command == "grant" })
+        saveState()
         return
     end
 
@@ -132,6 +158,17 @@ local function onClientCommand(module, command, player, args)
     if rateLimited(player) then return reject(player, "Please slow down") end
     if command == "queue" then
         handleQueue(player, args)
+    elseif command == "remove" then
+        handleRemove(player, args)
+    elseif command == "hello" then
+        sendServerCommand(player, Config.module, "permissions", {
+            isDj = isDj(player),
+            isAdmin = isAdmin(player),
+            catalogVersion = Config.catalogVersion,
+        })
+        for _, s in pairs(state.stations) do
+            sendServerCommand(player, Config.module, "stationState", publicStation(s))
+        end
     elseif command == "status" then
         local s = stationState(args.frequency)
         if s then sendServerCommand(player, Config.module, "stationState", publicStation(s)) end
@@ -143,11 +180,22 @@ end
 
 local function tickStations()
     local now = nowSeconds()
+    if now <= lastTick then return end
+    lastTick = now
     for _, s in pairs(state.stations) do
         if s.current and s.endsAt and now >= s.endsAt then startNext(s) end
     end
 end
 
-for frequency, _ in pairs(Config.stations) do stationState(frequency) end
+local function initializeState()
+    state = ModData.getOrCreate("MeeksRadioState")
+    state.stations = state.stations or {}
+    state.djs = state.djs or {}
+    state.cooldowns = {}
+    for frequency, _ in pairs(Config.stations) do stationState(frequency) end
+    tickStations()
+end
+
+Events.OnInitGlobalModData.Add(initializeState)
 Events.OnClientCommand.Add(onClientCommand)
-Events.EveryOneMinute.Add(tickStations)
+Events.OnTick.Add(tickStations)

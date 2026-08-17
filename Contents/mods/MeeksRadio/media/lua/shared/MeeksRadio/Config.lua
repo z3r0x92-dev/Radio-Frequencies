@@ -6,6 +6,7 @@ MeeksRadio.Config = {
     frequencyTolerance = 0.01,
     requestCooldownSeconds = 2,
     maxQueueLength = 20,
+    catalogVersion = "1",
     allowPortableRadios = true,
     allowWorldRadios = false,
     allowVehicleRadios = false,

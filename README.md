@@ -11,6 +11,8 @@ This repository contains the first playable multiplayer scaffold:
 - the server owns station state and broadcasts authoritative track timestamps;
 - admins can grant/revoke DJs, lock stations, skip/stop queues, and issue emergency overrides;
 - clients never submit file paths, URLs, sound names, or durations;
+- approved DJs can right-click a tuned radio to open a compact, vanilla-styled console;
+- DJ permissions, queues, station locks, and current playback timing persist in server mod data;
 - late listeners wait for the next track because Build 42's exposed Lua audio path does not provide a reliable cross-client seek primitive.
 
 World radios and vehicle radios are represented in configuration but disabled until their Build 42 stable device hooks are verified in multiplayer.
@@ -41,7 +43,11 @@ Example catalog entry:
 
 Track duration must match the encoded file closely because the server uses it to advance queues.
 
-## Commands
+## DJ console
+
+Approved DJs and admins tune a portable radio to a configured station, right-click the radio in inventory, and choose **Open Meeks DJ Console**. The compact Project Zomboid-style panel provides approved-track search, now-playing details, the upcoming queue, add/remove controls, and admin skip. Listeners use only the normal in-game radio controls.
+
+## Fallback commands
 
 Commands are sent through the mod's client command interface. The included chat-command bridge accepts:
 

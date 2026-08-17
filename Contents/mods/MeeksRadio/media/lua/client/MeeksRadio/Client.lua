@@ -1,9 +1,13 @@
 require "MeeksRadio/Config"
 require "MeeksRadio/Catalog"
+require "MeeksRadio/Console"
 
 local Config = MeeksRadio.Config
 local stationStates = {}
 local playback = { frequency = nil, trackId = nil, handle = nil, emitter = nil }
+local permissions = { isDj = false, isAdmin = false, catalogMatch = true }
+MeeksRadio.ClientStationStates = stationStates
+MeeksRadio.ClientPermissions = permissions
 
 local function activePortableFrequency(player)
     if not Config.allowPortableRadios or not player then return nil end
@@ -47,7 +51,8 @@ local function updatePlayback()
     -- Build 42 Lua audio does not expose a dependable synchronized seek here.
     -- A listener already tuned when the state arrives starts the track; a late
     -- listener waits for the next authoritative transition.
-    local elapsed = math.max(0, (s.serverTime or 0) - (s.startedAt or 0))
+    local clientNow = getTimestamp and getTimestamp() or (s.serverTime or 0)
+    local elapsed = math.max(0, clientNow - (s.startedAt or 0))
     if elapsed > 2 then return end
 
     local emitter = player:getEmitter()
@@ -65,7 +70,19 @@ local function onServerCommand(module, command, args)
         updatePlayback()
     elseif command == "error" and args.message then
         print("[Meeks Radio] " .. tostring(args.message))
+        if HaloTextHelper and getPlayer() then
+            HaloTextHelper.addBadText(getPlayer(), "Meeks Radio: " .. tostring(args.message))
+        end
+    elseif command == "permissions" then
+        permissions.isDj = args.isDj == true
+        permissions.isAdmin = args.isAdmin == true
+        permissions.catalogMatch = tostring(args.catalogVersion) == tostring(Config.catalogVersion)
+        if not permissions.catalogMatch then print("[Meeks Radio] Catalog mismatch; DJ console disabled") end
     end
+end
+
+local function requestHello()
+    sendClientCommand(Config.module, "hello", { catalogVersion = Config.catalogVersion })
 end
 
 local function words(value)
@@ -96,6 +113,7 @@ end
 
 Events.OnServerCommand.Add(onServerCommand)
 Events.OnPlayerUpdate.Add(updatePlayback)
+Events.OnCreatePlayer.Add(requestHello)
 
 -- OnAddMessage signature varies across B42 patches; keep this bridge guarded.
 if Events.OnAddMessage then Events.OnAddMessage.Add(onChatMessage) end

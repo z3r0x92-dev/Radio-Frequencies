@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520">
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#2b3440" opacity=".2"/></pattern>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151a20"/><stop offset="1" stop-color="#080b0f"/></linearGradient>
+  </defs>
+  <rect x="1" y="1" width="758" height="518" fill="url(#fade)" stroke="#ebebeb" stroke-width="2"/>
+  <rect x="2" y="2" width="756" height="516" fill="url(#grid)"/>
+  <rect x="2" y="2" width="756" height="25" fill="#07090c"/>
+  <path d="M2 27H758M2 72H758M2 116H758M2 482H758" stroke="#ebebeb" opacity=".65"/>
+  <rect x="2" y="483" width="756" height="35" fill="#07090c"/>
+</svg>
