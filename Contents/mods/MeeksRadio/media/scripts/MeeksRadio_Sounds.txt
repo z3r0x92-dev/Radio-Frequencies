@@ -1,0 +1,15 @@
+module MeeksRadio
+{
+    /*
+    sound MeeksRadio_MySong
+    {
+        category = Music,
+        clip
+        {
+            file = media/sound/MeeksRadio/my_song.ogg,
+            distanceMax = 12,
+            volume = 1.0,
+        }
+    }
+    */
+}

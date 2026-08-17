@@ -1,0 +1,6 @@
+name=Meeks Radio
+id=MeeksRadio
+description=Server-authoritative multiplayer radio stations and DJ queues for Meeks Protocol.
+author=Meeks Protocol
+version=0.1.0
+versionMin=42.0
