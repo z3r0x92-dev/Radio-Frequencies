@@ -9,12 +9,13 @@ MeeksRadio = MeeksRadio or {}
 MeeksRadio.Console = ISPanel:derive("MeeksRadioConsole")
 MeeksRadio.Console.instance = nil
 
--- Shared visual language with Survivor League Community.
+-- Meeks Protocol visual language: deep plum-black surfaces and hot-pink
+-- broadcast accents while retaining the compact community-mod layout.
 local C = {
-    bg={0.035,0.035,0.045,0.97}, panel={0.065,0.065,0.080,0.96},
-    rowA={0.085,0.085,0.100,0.92}, rowB={0.055,0.055,0.068,0.92},
-    accent={0.40,0.85,0.54,1.0}, silver={0.77,0.79,0.82,1.0},
-    text={0.92,0.92,0.95,1.0}, muted={0.58,0.59,0.64,1.0}, line={0.20,0.20,0.24,0.85},
+    bg={0.045,0.018,0.040,0.98}, panel={0.090,0.035,0.075,0.97},
+    rowA={0.125,0.045,0.100,0.94}, rowB={0.075,0.028,0.065,0.94},
+    accent={1.00,0.31,0.64,1.0}, silver={1.00,0.72,0.87,1.0},
+    text={1.00,0.91,0.96,1.0}, muted={0.72,0.48,0.62,1.0}, line={0.34,0.12,0.27,0.90},
 }
 
 local function rgba(color)
@@ -108,7 +109,7 @@ end
 function MeeksRadio.Console:prerender()
     ISPanel.prerender(self)
     if self.frameTexture then self:drawTextureScaled(self.frameTexture,0,0,760,520,1,1,1,1) end
-    self:drawText("MEEKS RADIO // COMMUNITY BROADCAST SYSTEM //",20,10,C.silver[1],C.silver[2],C.silver[3],1,UIFont.Small)
+    self:drawText("MEEKS PROTOCOL // RADIO OPERATIONS //",20,10,C.silver[1],C.silver[2],C.silver[3],1,UIFont.Small)
     self:drawText("●",20,43,C.accent[1],C.accent[2],C.accent[3],1,UIFont.Medium)
     self:drawText("BROADCAST STATUS: ONLINE",42,45,C.accent[1],C.accent[2],C.accent[3],1,UIFont.Small)
     self:drawTextRight("BUILD 42 // MULTIPLAYER",738,45,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
@@ -120,7 +121,7 @@ function MeeksRadio.Console:prerender()
     self:drawText("UP NEXT",484,141,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
     drawCorners(self,20,150,450,282,C.silver); drawCorners(self,478,150,262,282,C.silver)
     self:drawText("LIVE",22,492,C.accent[1],C.accent[2],C.accent[3],1,UIFont.Small)
-    self:drawTextCentre("SERVER-VALIDATED AUDIO // CREATED BY Z3R0X92",380,492,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawTextCentre("MEEKS PROTOCOL // SERVER-VALIDATED AUDIO // Z3R0X92",380,492,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
 end
 
 function MeeksRadio.Console:onAdd()

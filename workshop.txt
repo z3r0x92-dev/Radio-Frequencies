@@ -1,0 +1,6 @@
+version=1
+id=3785340353
+title=Meeks Radio
+description=Server-authoritative community radio and DJ queues for Project Zomboid Build 42 multiplayer. Players listen through ordinary radios tuned to configured frequencies while approved DJs manage a server-approved packaged music catalog.
+tags=Build 42;Multiplayer;Framework;Misc;Realistic
+visibility=unlisted
