@@ -5,7 +5,7 @@ require "MeeksRadio/Console"
 local Config = MeeksRadio.Config
 local stationStates = {}
 local playback = { frequency = nil, trackId = nil, handle = nil, emitter = nil }
-local permissions = { isDj = false, isAdmin = false, catalogMatch = true }
+local permissions = { isDj = false, isAdmin = false, catalogMatch = true, protocolMatch = true }
 MeeksRadio.ClientStationStates = stationStates
 MeeksRadio.ClientPermissions = permissions
 
@@ -76,13 +76,19 @@ local function onServerCommand(module, command, args)
     elseif command == "permissions" then
         permissions.isDj = args.isDj == true
         permissions.isAdmin = args.isAdmin == true
-        permissions.catalogMatch = tostring(args.catalogVersion) == tostring(Config.catalogVersion)
-        if not permissions.catalogMatch then print("[Meeks Radio] Catalog mismatch; DJ console disabled") end
+        permissions.catalogMatch = args.catalogMatch == true and tostring(args.catalogVersion) == tostring(Config.catalogVersion)
+        permissions.protocolMatch = args.protocolMatch == true and tostring(args.protocolVersion) == tostring(Config.protocolVersion)
+        if not permissions.catalogMatch then
+            print("[Meeks Radio] Catalog mismatch; client=" .. tostring(Config.catalogVersion) .. " server=" .. tostring(args.catalogVersion))
+        end
+        if not permissions.protocolMatch then
+            print("[Meeks Radio] Protocol mismatch; client=" .. tostring(Config.protocolVersion) .. " server=" .. tostring(args.protocolVersion))
+        end
     end
 end
 
 local function requestHello()
-    sendClientCommand(Config.module, "hello", { catalogVersion = Config.catalogVersion })
+    sendClientCommand(Config.module, "hello", { catalogVersion = Config.catalogVersion, protocolVersion = Config.protocolVersion })
 end
 
 local function words(value)

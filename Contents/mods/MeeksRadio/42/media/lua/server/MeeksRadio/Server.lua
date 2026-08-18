@@ -5,6 +5,8 @@ local Config = MeeksRadio.Config
 local state = { stations = {}, djs = {}, cooldowns = {} }
 local lastTick = 0
 
+local compatibleClients = {}
+
 local function nowSeconds()
     return getTimestamp and getTimestamp() or os.time()
 end
@@ -155,6 +157,13 @@ end
 
 local function onClientCommand(module, command, player, args)
     if module ~= Config.module or type(args) ~= "table" then return end
+    local clientKey = string.lower(username(player))
+    if command == "hello" then
+        compatibleClients[clientKey] = tostring(args.catalogVersion) == tostring(Config.catalogVersion)
+            and tostring(args.protocolVersion) == tostring(Config.protocolVersion)
+    elseif command ~= "status" and compatibleClients[clientKey] ~= true then
+        return reject(player, "Meeks Radio client/server version mismatch; reconnect or update the mod")
+    end
     if rateLimited(player) then return reject(player, "Please slow down") end
     if command == "queue" then
         handleQueue(player, args)
@@ -165,6 +174,9 @@ local function onClientCommand(module, command, player, args)
             isDj = isDj(player),
             isAdmin = isAdmin(player),
             catalogVersion = Config.catalogVersion,
+            protocolVersion = Config.protocolVersion,
+            catalogMatch = tostring(args.catalogVersion) == tostring(Config.catalogVersion),
+            protocolMatch = tostring(args.protocolVersion) == tostring(Config.protocolVersion),
         })
         for _, s in pairs(state.stations) do
             sendServerCommand(player, Config.module, "stationState", publicStation(s))
