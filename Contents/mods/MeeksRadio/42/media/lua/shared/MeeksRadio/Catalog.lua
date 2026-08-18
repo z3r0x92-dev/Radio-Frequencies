@@ -29,6 +29,6 @@ MeeksRadio.Catalog = {
 function MeeksRadio.getTrack(trackId)
     local track = MeeksRadio.Catalog[tostring(trackId or "")]
     if not track then return nil end
-    if type(track.sound) ~= "string" or tonumber(track.duration) == nil then return nil end
+    if type(track.sound) ~= "string" or (tonumber(track.duration) or 0) <= 0 then return nil end
     return track
 end

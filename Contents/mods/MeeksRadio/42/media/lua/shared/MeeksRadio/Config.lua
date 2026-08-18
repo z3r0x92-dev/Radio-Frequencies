@@ -2,7 +2,7 @@ MeeksRadio = MeeksRadio or {}
 
 MeeksRadio.Config = {
     module = "MeeksRadio",
-    protocolVersion = 1,
+    protocolVersion = 2,
     frequencyTolerance = 0.01,
     requestCooldownSeconds = 2,
     maxQueueLength = 20,
