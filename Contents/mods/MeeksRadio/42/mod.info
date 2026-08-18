@@ -1,6 +1,6 @@
-name=Meeks Radio
+name=Radio Frequencies
 id=MeeksRadio
-description=Server-authoritative multiplayer radio stations and DJ queues for Meeks Protocol.
+description=Server-authoritative music queues and tuned-radio announcements, emergency alerts, lore, events, and community updates for Meeks Protocol.
 author=Meeks Protocol
-version=0.2.0
+version=0.5.0
 versionMin=42.0

@@ -29,6 +29,12 @@ MeeksRadio.Catalog = {
 function MeeksRadio.getTrack(trackId)
     local track = MeeksRadio.Catalog[tostring(trackId or "")]
     if not track then return nil end
-    if type(track.sound) ~= "string" or (tonumber(track.duration) or 0) <= 0 then return nil end
+    local duration = tonumber(track.duration)
+    local config = MeeksRadio.Config or {}
+    local minimum = tonumber(config.minTrackDurationSeconds) or 1
+    local maximum = tonumber(config.maxTrackDurationSeconds) or 3600
+    if type(track.sound) ~= "string" or track.sound == "" then return nil end
+    if not duration or duration ~= duration or duration == math.huge or duration == -math.huge then return nil end
+    if duration < minimum or duration > maximum then return nil end
     return track
 end
