@@ -2,4 +2,5 @@ name=Radio Frequencies
 id=MeeksRadio
 description=Server-authoritative music queues and tuned-radio announcements, emergency alerts, lore, events, and community updates for Meeks Protocol.
 author=Meeks Protocol
-version=0.9.1
+version=0.11.1
+versionMin=42.0

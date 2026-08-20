@@ -40,6 +40,7 @@ end
 local function addButton(self,x,y,w,label,callback,primary)
     local b=ISButton:new(x,y,w,self.buttonHeight or 30,label,self,callback)
     b:initialise()
+    b.font=UIFont.Small
     b.backgroundColor=rgba(primary and C.buttonPrimary or C.button)
     b.backgroundColorMouseOver=rgba(C.buttonHover)
     b.borderColor=rgba(C.line)
@@ -47,9 +48,28 @@ local function addButton(self,x,y,w,label,callback,primary)
     self:addChild(b); return b
 end
 
+local function drawConsoleListItem(list,y,item,alt)
+    local selected=list.selected==item.index
+    local fill=selected and {0.095,0.095,0.112,0.98} or (alt and {0.048,0.048,0.058,0.94} or {0.032,0.032,0.040,0.94})
+    list:drawRect(0,y,list:getWidth(),list.itemheight,fill[4],fill[1],fill[2],fill[3])
+    if selected then list:drawRect(0,y,3,list.itemheight,1,C.accent[1],C.accent[2],C.accent[3]) end
+    local font=list.font or UIFont.Small
+    local fontHeight=getTextManager():getFontHeight(font)
+    local textY=y+math.max(2,math.floor((list.itemheight-fontHeight)/2))
+    list:drawText(fitText(item.text or "",font,list:getWidth()-20),10,textY,C.text[1],C.text[2],C.text[3],1,font)
+    return y+list.itemheight
+end
+
+local function styleConsoleList(list)
+    list.font=UIFont.Small
+    list.backgroundColor=rgba(C.panel)
+    list.borderColor=rgba(C.line)
+    list.doDrawItem=drawConsoleListItem
+end
+
 function MeeksRadio.Console:new(player,frequency)
     local sw,sh=getCore():getScreenWidth(),getCore():getScreenHeight()
-    local w,h=math.max(1,math.min(1020,sw-80)),math.max(1,math.min(760,sh-80))
+    local w,h=math.max(1,math.min(1180,sw-30)),math.max(1,math.min(680,sh-30))
     local o=ISPanel.new(self,math.max(0,(sw-w)/2),math.max(0,(sh-h)/2),w,h)
     o.player=player; o.frequency=frequency or 102800; o.moveWithMouse=true
     o.backgroundColor=rgba(C.bg); o.borderColor={r=.08,g=.08,b=.08,a=1}
@@ -62,49 +82,83 @@ function MeeksRadio.Console:createChildren()
     local fontHeight=getTextManager():getFontHeight(UIFont.Small)
     self.buttonHeight=math.max(30,fontHeight+8)
     self.rowHeight=math.max(28,fontHeight+6)
-    local leftX=22; local rightX=math.floor(self.width*.62); local leftW=rightX-leftX-16; local rightW=self.width-rightX-22
-    local labelY=252
+    self.activeTab="station"
+    local leftX=24; local rightX=math.floor(self.width*.64); local leftW=rightX-leftX-16; local rightW=self.width-rightX-24
+    local tabsY=102
+    self.listenerButton=addButton(self,342,tabsY,150,"LISTENER VIEW",self.onListenerView,false)
+    self.stationTabButton=addButton(self,500,tabsY,128,"STATION",self.onStationTab,true)
+    if self.isAdmin then self.adminTabButton=addButton(self,636,tabsY,150,"ADMIN TOOLS",self.onAdminTab,false) end
+    local labelY=294
     local searchY=labelY+fontHeight+6
     local fieldHeight=math.max(28,fontHeight+8)
     local listY=searchY+fieldHeight+6
-    local actionY=self.isAdmin and self.height-(self.buttonHeight*4+86) or self.height-(self.buttonHeight+54)
+    local actionY=self.height-(self.buttonHeight+96)
     local listHeight=math.max(100,actionY-listY-14)
     self.layout={labelY=labelY,searchY=searchY,listY=listY,actionY=actionY}
     self.search=ISTextEntryBox:new("",leftX,searchY,leftW,fieldHeight)
     self.search:initialise(); self.search.backgroundColor=rgba(C.panel); self.search.borderColor=rgba(C.line)
     self.search:setTooltip("Search the server-approved music catalog"); self:addChild(self.search)
     self.trackList=ISScrollingListBox:new(leftX,listY,leftW,listHeight)
-    self.trackList:initialise(); self.trackList.itemheight=self.rowHeight; self.trackList.backgroundColor=rgba(C.panel); self:addChild(self.trackList)
+    self.trackList:initialise(); self.trackList.itemheight=self.rowHeight; styleConsoleList(self.trackList); self:addChild(self.trackList)
     self.queueList=ISScrollingListBox:new(rightX,searchY,rightW,actionY-searchY-14)
-    self.queueList:initialise(); self.queueList.itemheight=self.rowHeight; self.queueList.backgroundColor=rgba(C.panel); self:addChild(self.queueList)
+    self.queueList:initialise(); self.queueList.itemheight=self.rowHeight; styleConsoleList(self.queueList); self:addChild(self.queueList)
     self.addButton=addButton(self,leftX,actionY,160,"ADD TO QUEUE",self.onAdd,true)
     self.removeButton=addButton(self,leftX+170,actionY,120,"REMOVE",self.onRemove,false)
-    self.closeButton=addButton(self,self.width-154,actionY,132,"CLOSE",self.close,false)
+    self.topCloseButton=addButton(self,self.width-52,16,28,"X",self.close,false)
+    self.closeButton=addButton(self,self.width-166,self.height-48,142,"CLOSE",self.close,false)
     if self.isAdmin then
-        local secondY=actionY+self.buttonHeight+8
         self.skipButton=addButton(self,leftX+300,actionY,100,"SKIP",self.onSkip,false)
         self.stopButton=addButton(self,leftX+410,actionY,100,"STOP",self.onStop,false)
-        self.lockButton=addButton(self,rightX,actionY,math.max(100,rightW-154),"LOCK",self.onLock,false)
-        self.emergencyButton=addButton(self,rightX,secondY,rightW,"EMERGENCY: SELECTED TRACK",self.onEmergency,true)
-        self.djInput=ISTextEntryBox:new("",leftX,secondY,220,self.buttonHeight)
+        self.lockButton=addButton(self,rightX,actionY,160,"LOCK",self.onLock,false)
+        local adminTop=190
+        self.emergencyButton=addButton(self,44,adminTop,self.width-88,"PLAY SELECTED TRACK AS EMERGENCY OVERRIDE",self.onEmergency,true)
+        self.layout.djLabelY=adminTop+self.buttonHeight+12
+        self.layout.djInputY=self.layout.djLabelY+fontHeight+6
+        self.djInput=ISTextEntryBox:new("",44,self.layout.djInputY,280,self.buttonHeight)
         self.djInput:initialise(); self.djInput.backgroundColor=rgba(C.panel); self.djInput.borderColor=rgba(C.line)
         self.djInput:setTooltip("Exact username for a DJ assignment"); self:addChild(self.djInput)
-        self.djGrantButton=addButton(self,leftX+230,secondY,110,"GRANT DJ",self.onGrantDj,false)
-        self.djRevokeButton=addButton(self,leftX+350,secondY,110,"REVOKE",self.onRevokeDj,false)
+        self.djGrantButton=addButton(self,334,self.layout.djInputY,130,"GRANT DJ",self.onGrantDj,false)
+        self.djRevokeButton=addButton(self,474,self.layout.djInputY,140,"REVOKE DJ",self.onRevokeDj,false)
         self.broadcastKinds={"announcement","emergency","lore","event","community"}
         self.broadcastKindIndex=1
-        self.layout.broadcastLabelY=secondY+self.buttonHeight+8
+        self.layout.adminTop=adminTop
+        self.layout.broadcastLabelY=self.layout.djInputY+self.buttonHeight+22
         self.layout.broadcastInputY=self.layout.broadcastLabelY+fontHeight+4
         self.layout.broadcastButtonsY=self.layout.broadcastInputY+fieldHeight+6
-        self.broadcastInput=ISTextEntryBox:new("",22,self.layout.broadcastInputY,self.width-44,fieldHeight)
+        self.broadcastInput=ISTextEntryBox:new("",44,self.layout.broadcastInputY,self.width-88,fieldHeight)
         self.broadcastInput:initialise(); self.broadcastInput.backgroundColor=rgba(C.panel); self.broadcastInput.borderColor=rgba(C.line)
         self.broadcastInput:setTooltip("Text shown only to players listening on this frequency"); self:addChild(self.broadcastInput)
-        self.broadcastKindButton=addButton(self,22,self.layout.broadcastButtonsY,math.floor((self.width-66)/3),"TYPE: ANNOUNCEMENT",self.onBroadcastKind,false)
-        self.broadcastSendButton=addButton(self,32+math.floor((self.width-66)/3),self.layout.broadcastButtonsY,math.floor((self.width-66)/3),"SEND BROADCAST",self.onBroadcast,true)
+        self.broadcastKindButton=addButton(self,44,self.layout.broadcastButtonsY,math.floor((self.width-116)/3),"TYPE: ANNOUNCEMENT",self.onBroadcastKind,false)
+        self.broadcastSendButton=addButton(self,54+math.floor((self.width-116)/3),self.layout.broadcastButtonsY,math.floor((self.width-116)/3),"SEND BROADCAST",self.onBroadcast,true)
         self.templateIndex=0
-        self.templateButton=addButton(self,42+math.floor((self.width-66)*2/3),self.layout.broadcastButtonsY,math.floor((self.width-66)/3),"LOAD NEXT TEMPLATE",self.onTemplate,false)
+        self.templateButton=addButton(self,64+math.floor((self.width-116)*2/3),self.layout.broadcastButtonsY,math.floor((self.width-116)/3),"LOAD NEXT TEMPLATE",self.onTemplate,false)
     end
-    self.lastFilter=nil; self:refreshTracks(); self:refreshStation()
+    self.lastFilter=nil; self:refreshTracks(); self:refreshStation(); self:applyTabVisibility()
+end
+
+function MeeksRadio.Console:setControlVisible(control,visible)
+    if control then control:setVisible(visible) end
+end
+
+function MeeksRadio.Console:applyTabVisibility()
+    local station=self.activeTab~="admin"
+    for _,control in ipairs({self.search,self.trackList,self.queueList,self.addButton,self.removeButton,self.skipButton,self.stopButton,self.lockButton}) do
+        self:setControlVisible(control,station)
+    end
+    local admin=self.isAdmin and self.activeTab=="admin"
+    for _,control in ipairs({self.emergencyButton,self.djInput,self.djGrantButton,self.djRevokeButton,self.broadcastInput,self.broadcastKindButton,self.broadcastSendButton,self.templateButton}) do
+        self:setControlVisible(control,admin)
+    end
+    if self.stationTabButton then self.stationTabButton.backgroundColor=rgba(station and C.buttonPrimary or C.button) end
+    if self.adminTabButton then self.adminTabButton.backgroundColor=rgba(admin and C.buttonPrimary or C.button) end
+end
+
+function MeeksRadio.Console:onStationTab() self.activeTab="station"; self:applyTabVisibility() end
+function MeeksRadio.Console:onAdminTab() if self.isAdmin then self.activeTab="admin"; self:applyTabVisibility() end end
+function MeeksRadio.Console:onListenerView()
+    local player,frequency=self.player,self.frequency
+    self:close()
+    if MeeksRadio.Listener then MeeksRadio.Listener.open(player,frequency) end
 end
 
 function MeeksRadio.Console:refreshTracks()
@@ -142,55 +196,66 @@ end
 function MeeksRadio.Console:prerender()
     ISPanel.prerender(self)
     local center=self.width/2
-    -- Windows 95 shell surrounding a black 1990s hi-fi receiver display.
-    self:drawRect(4,4,self.width-8,30,1,C.accent[1],C.accent[2],C.accent[3])
-    self:drawText("RADIO FREQUENCIES // "..C.name,12,10,C.titleText[1],C.titleText[2],C.titleText[3],1,UIFont.Small)
+    self:drawRect(0,0,self.width,68,1,C.panel[1],C.panel[2],C.panel[3])
+    self:drawRect(0,67,self.width,1,1,C.line[1],C.line[2],C.line[3])
+    self:drawText("RADIO FREQUENCIES // COMMAND CENTER",22,20,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
     local permission=MeeksRadio.ClientPermissions or {}
     local status="ONLINE"
     local statusColor=C.live
     if permission.helloAcknowledged==false then status="CONNECTING..."; statusColor=C.muted
     elseif permission.protocolMatch==false then status="PROTOCOL MISMATCH"; statusColor=C.bright
     elseif permission.catalogMatch==false then status="CATALOG MISMATCH"; statusColor=C.bright end
-    self:drawTextCentre("[ "..status.." ]",center,10,statusColor[1],statusColor[2],statusColor[3],1,UIFont.Small)
-    self:drawTextRight(self.isAdmin and "ADMIN" or (self.permissionAllowed and "DJ" or "LISTENER"),self.width-12,10,C.titleText[1],C.titleText[2],C.titleText[3],1,UIFont.Small)
-    self:drawRect(12,42,self.width-24,202,1,.02,.03,.025)
-    self:drawRect(12,42,self.width-24,2,1,1,1,1)
-    self:drawRect(12,42,2,202,1,1,1,1)
-    self:drawRect(12,self.height-2,self.width-12,2,1,.16,.16,.16)
-    self:drawTextCentre(fitText(self.stationName or "RADIO FREQUENCIES",UIFont.Small,self.width-80),center,51,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
-    self:drawTextCentre(string.format("%.1f MHz",self.frequency/1000),center,73,C.accent[1],C.accent[2],C.accent[3],1,UIFont.Large)
+    self:drawText("STATUS: "..status,22,44,statusColor[1],statusColor[2],statusColor[3],1,UIFont.Small)
+    self:drawText("SERVER-SYNCHRONIZED BROADCASTING",174,44,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawTextRight("BUILD 42",self.width-64,20,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawText("RADIO FREQUENCIES",22,84,C.text[1],C.text[2],C.text[3],1,UIFont.Large)
+    self:drawText("COMMAND CENTER",24,116,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawTextRight(fitText(self.stationName or "RADIO FREQUENCIES",UIFont.Medium,300),self.width-24,80,C.text[1],C.text[2],C.text[3],1,UIFont.Medium)
+    self:drawTextRight(string.format("%.1f MHz",self.frequency/1000),self.width-24,108,C.accent[1],C.accent[2],C.accent[3],1,UIFont.Medium)
+    local state=self.state or {}
+    if self.activeTab~="admin" then
+    self:drawRect(22,154,self.width-44,124,0.72,C.panel[1],C.panel[2],C.panel[3])
+    self:drawRectBorder(22,154,self.width-44,124,0.9,C.line[1],C.line[2],C.line[3])
     local title=self.current and (self.current.title or self.current.id) or "OFF AIR"
     local artist=self.current and (self.current.artist or "UNKNOWN ARTIST") or "WAITING FOR BROADCAST"
-    self:drawTextCentre(fitText(title,UIFont.Medium,self.width-100),center,112,C.text[1],C.text[2],C.text[3],1,UIFont.Medium)
-    self:drawTextCentre(fitText(artist,UIFont.Small,self.width-100),center,139,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
-    local state=self.state or {}; local duration=self.current and tonumber(self.current.duration) or 0
+    self:drawTextCentre(fitText(title,UIFont.Medium,self.width-100),center,166,C.text[1],C.text[2],C.text[3],1,UIFont.Medium)
+    self:drawTextCentre(fitText(artist,UIFont.Small,self.width-100),center,194,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    local duration=self.current and tonumber(self.current.duration) or 0
     local now=getTimestamp and getTimestamp() or os.time()
     local elapsed=state.startedAt and math.min(duration,math.max(0,now-state.startedAt)) or 0
     local progress=duration>0 and elapsed/duration or 0
     local playbackStatus=MeeksRadio.ClientPlaybackStatus or {}
     local waiting=playbackStatus.waitingForNext==true and playbackStatus.frequency==self.frequency and playbackStatus.trackId==state.currentTrackId
     if waiting then
-        self:drawTextCentre("TUNED IN - CURRENT BROADCAST ALREADY IN PROGRESS",center,160,C.bright[1],C.bright[2],C.bright[3],1,UIFont.Small)
-        self:drawTextCentre("AUDIO BEGINS WITH NEXT TRACK",center,182,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+        self:drawTextCentre("TUNED IN // AUDIO BEGINS WITH NEXT TRACK",center,218,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
     else
-        local heights={8,18,28,14,22,34,16,26,11,21,30,13,24,17,27,9}
-        for i,height in ipairs(heights) do self:drawRect(center-132+(i-1)*17,174-height/2,5,height,.82,C.accent[1],C.accent[2],C.accent[3]) end
+        local heights={6,12,19,10,15,22,12,18,8,14,20,9,16,11,18,7}
+        for i,height in ipairs(heights) do self:drawRect(center-132+(i-1)*17,226-height/2,5,height,.82,C.accent[1],C.accent[2],C.accent[3]) end
     end
     local progressWidth=math.max(20,self.width-140)
-    self:drawRect(70,204,progressWidth,4,1,C.line[1],C.line[2],C.line[3]); self:drawRect(70,204,progressWidth*progress,4,1,C.accent[1],C.accent[2],C.accent[3])
-    self:drawText(clock(elapsed),70,216,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
-    self:drawTextCentre("SERVER SYNCHRONIZED",center,216,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
-    self:drawTextRight(clock(duration),self.width-70,216,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
-    self:drawText("APPROVED TRACKS",22,self.layout.labelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
-    self:drawText("UP NEXT",math.floor(self.width*.62),self.layout.labelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
-    local bulletin=state.activeBulletin
-    if bulletin then
-        self:drawText(fitText("["..string.upper(tostring(bulletin.kind or "announcement")).."] "..tostring(bulletin.text or ""),UIFont.Small,self.width-44),22,self.layout.broadcastLabelY or (self.layout.actionY+self.buttonHeight+8),C.bright[1],C.bright[2],C.bright[3],1,UIFont.Small)
-    elseif self.isAdmin then
-        self:drawText("BROADCAST MESSAGE",22,self.layout.broadcastLabelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    self:drawRect(70,242,progressWidth,4,1,C.line[1],C.line[2],C.line[3]); self:drawRect(70,242,progressWidth*progress,4,1,C.accent[1],C.accent[2],C.accent[3])
+    self:drawText(clock(elapsed),70,250,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
+    self:drawTextCentre("SERVER SYNCHRONIZED",center,250,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawTextRight(clock(duration),self.width-70,250,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
     end
-    self:drawRect(22,self.height-27,10,10,1,C.live[1],C.live[2],C.live[3])
-    self:drawText("LIVE",40,self.height-32,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    if self.activeTab~="admin" then
+        self:drawRectBorder(22,286,math.floor(self.width*.64)-20,self.height-382,0.9,C.line[1],C.line[2],C.line[3])
+        self:drawRectBorder(math.floor(self.width*.64)-2,286,self.width-math.floor(self.width*.64)-20,self.height-382,0.9,C.line[1],C.line[2],C.line[3])
+        self:drawText("APPROVED TRACKS",24,self.layout.labelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+        self:drawText("UP NEXT",math.floor(self.width*.64),self.layout.labelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    else
+        self:drawRectBorder(22,154,self.width-44,382,0.9,C.line[1],C.line[2],C.line[3])
+        self:drawTextCentre("ADMINISTRATIVE CONTROLS",center,self.layout.adminTop-26,C.text[1],C.text[2],C.text[3],1,UIFont.Medium)
+        self:drawText("DJ USERNAME",44,self.layout.djLabelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    end
+    local bulletin=state.activeBulletin
+    if bulletin and self.activeTab=="admin" then
+        self:drawText(fitText("["..string.upper(tostring(bulletin.kind or "announcement")).."] "..tostring(bulletin.text or ""),UIFont.Small,self.width-88),44,self.layout.broadcastLabelY or (self.layout.actionY+self.buttonHeight+8),C.bright[1],C.bright[2],C.bright[3],1,UIFont.Small)
+    elseif self.isAdmin and self.activeTab=="admin" then
+        self:drawText("BROADCAST MESSAGE",44,self.layout.broadcastLabelY,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    end
+    self:drawRect(24,self.height-27,10,10,1,C.live[1],C.live[2],C.live[3])
+    self:drawText("LIVE",42,self.height-32,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
     local receiver=MeeksRadio.activeRadioReceiver and MeeksRadio.activeRadioReceiver(self.player,false) or nil
     self:drawTextCentre(fitText((receiver and receiver.label or "NO ACTIVE RECEIVER").." // "..tostring(self.permissionReason or "checking permission"),UIFont.Small,self.width-100),center,self.height-32,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
 end

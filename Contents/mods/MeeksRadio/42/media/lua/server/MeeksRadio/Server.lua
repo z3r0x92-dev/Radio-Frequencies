@@ -24,8 +24,8 @@ end
 
 local function isAdmin(player)
     if not player then return false end
-    local level = tostring(player:getAccessLevel() or "")
-    return level ~= "" and level ~= "None" and level ~= "none" and level ~= "player"
+    local level = string.lower(tostring(player:getAccessLevel() or ""))
+    return level == "admin"
 end
 
 local function shiftAllows(user, frequency)

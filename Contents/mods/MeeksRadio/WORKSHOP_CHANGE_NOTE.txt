@@ -1,0 +1,9 @@
+v0.11.1 - Player Request fix and Command Center redesign
+
+- Redesigned Listener, Station, and Admin screens to match Survivor League.
+- Added a consistent status header, navigation, bordered panels, footer, and close controls.
+- Improved announcement readability while preserving wrapped history entries and full selected-message details.
+- Unified Project Zomboid, Meeks Protocol, and Military theme palettes.
+- Preserved playback, requests, favorites, queue controls, DJ permissions, emergency overrides, and broadcasts.
+- Updated client/server compatibility protocol; restart both the server and game after updating.
+- Fixed Player Request when Listener View is opened without an actively detected receiver; music playback still requires a powered tuned radio.

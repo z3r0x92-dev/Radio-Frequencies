@@ -2,7 +2,7 @@ MeeksRadio = MeeksRadio or {}
 
 MeeksRadio.Config = {
     module = "MeeksRadio",
-    protocolVersion = 6,
+    protocolVersion = 8,
     -- Fallback when the Sandbox option is unavailable: 1 Project Zomboid,
     -- 2 Meeks Protocol, 3 Military.
     interfaceTheme = 2,

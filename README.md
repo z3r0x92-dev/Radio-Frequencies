@@ -1,5 +1,7 @@
 # Radio Frequencies
 
+> **Current release: v0.11.1 (Build 42.20+)** — includes the Survivor League-style Command Center redesign, protocol 8, and the Player Request fix. Client and server copies must match.
+
 Server-authoritative music, announcements, emergency alerts, lore, events, and community updates delivered through configured Project Zomboid radio frequencies.
 
 Current mod version: **0.9.1** (protocol v6, catalog `3-ghosted`).

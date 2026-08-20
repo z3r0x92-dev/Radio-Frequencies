@@ -172,25 +172,42 @@ local function updatePlayback()
     end
 end
 
+local function showServerChatMessage(message)
+    local displayed=false
+    pcall(function()
+        local chatClass=ChatManager
+        if not chatClass and luajava and luajava.bindClass then
+            chatClass=luajava.bindClass("zombie.chat.ChatManager")
+        end
+        local chat=chatClass and chatClass.getInstance and chatClass.getInstance()
+        if chat and (not chat.isWorking or chat:isWorking()) then
+            chat:showServerChatMessage(message)
+            displayed=true
+        end
+    end)
+    return displayed
+end
+
 local function showRadioBroadcast(args)
     local player = getPlayer()
     local frequency = Config.normalizeFrequency(args.frequency)
-    if not player or not frequency or activeRadioFrequency(player, true) ~= frequency then return end
+    if not player or not frequency then return end
     local id = math.floor(tonumber(args.id) or 0)
     if id <= lastBroadcastId then return end
     local now = getTimestamp and getTimestamp() or os.time()
     if tonumber(args.expiresAt) and now > tonumber(args.expiresAt) then return end
     lastBroadcastId = id
-    local kind = string.upper(tostring(args.kind or "announcement"))
+    local kindKey = string.lower(tostring(args.kind or "announcement"))
+    local kind = string.upper(kindKey)
     local message = "[RADIO " .. kind .. "] " .. tostring(args.text or "")
+    local tuned = activeRadioFrequency(player, true) == frequency
+    local serverWide = kindKey == "announcement" or kindKey == "emergency" or kindKey == "community"
+    if not tuned and not serverWide then return end
     print("[Radio Frequencies] " .. message)
-    if HaloTextHelper then
+    showServerChatMessage(message)
+    if kindKey == "emergency" and tuned and HaloTextHelper then
         pcall(function()
-            if string.lower(tostring(args.kind or "")) == "emergency" and HaloTextHelper.addBadText then
-                HaloTextHelper.addBadText(player, message)
-            elseif HaloTextHelper.addText then
-                HaloTextHelper.addText(player, message)
-            elseif HaloTextHelper.addBadText then
+            if HaloTextHelper.addBadText then
                 HaloTextHelper.addBadText(player, message)
             end
         end)
