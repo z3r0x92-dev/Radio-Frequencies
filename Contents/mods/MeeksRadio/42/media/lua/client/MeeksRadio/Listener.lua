@@ -15,6 +15,7 @@ local function rgba(c) return {r=c[1],g=c[2],b=c[3],a=c[4]} end
 local function button(panel,x,y,w,title,callback)
     local value=ISButton:new(x,y,w,30,title,panel,callback)
     value:initialise()
+    value.font=UIFont.Small
     value.backgroundColor=rgba(C.button)
     value.backgroundColorMouseOver=rgba(C.buttonHover)
     value.borderColor=rgba(C.line)
@@ -41,9 +42,53 @@ local function fitText(text,font,maxWidth)
     return text.."..."
 end
 
+local function wrapText(text,font,maxWidth,maxLines)
+    local tm=getTextManager(); local lines={}; local current=""; local overflow=false
+    for word in string.gmatch(tostring(text or ""),"%S+") do
+        local candidate=current=="" and word or (current.." "..word)
+        if tm:MeasureStringX(font,candidate)<=maxWidth then
+            current=candidate
+        else
+            if current~="" then lines[#lines+1]=current end
+            current=word
+            if #lines>=maxLines then overflow=true; break end
+        end
+    end
+    if current~="" and #lines<maxLines then lines[#lines+1]=current end
+    if #lines==0 then lines[1]="" end
+    if overflow then lines[#lines]=fitText(lines[#lines].."...",font,maxWidth) end
+    return lines
+end
+
+local function listFontHeight(font)
+    local height=20
+    pcall(function() height=getTextManager():getFontHeight(font) end)
+    return tonumber(height) or 20
+end
+
+local function themedListItem(list,y,item,alt)
+    local selected=list.selected==item.index
+    local fill=selected and {0.095,0.095,0.112,0.98} or (alt and {0.048,0.048,0.058,0.94} or {0.032,0.032,0.040,0.94})
+    list:drawRect(0,y,list:getWidth(),list.itemheight,fill[4],fill[1],fill[2],fill[3])
+    if selected then list:drawRect(0,y,3,list.itemheight,1,C.accent[1],C.accent[2],C.accent[3]) end
+    local lines=wrapText(item.text or "",list.font,list:getWidth()-20,list.wrapLines or 1)
+    local lineHeight=listFontHeight(list.font)
+    local textY=y+math.max(2,math.floor((list.itemheight-(#lines*lineHeight))/2))
+    for index,line in ipairs(lines) do
+        list:drawText(fitText(line,list.font,list:getWidth()-20),10,textY+((index-1)*lineHeight),C.text[1],C.text[2],C.text[3],1,list.font)
+    end
+    return y+list.itemheight
+end
+
+local function styleList(list)
+    list.backgroundColor=rgba(C.panel)
+    list.borderColor=rgba(C.line)
+    list.doDrawItem=themedListItem
+end
+
 function MeeksRadio.Listener:new(player,frequency)
     local sw,sh=getCore():getScreenWidth(),getCore():getScreenHeight()
-    local w,h=math.max(1,math.min(920,sw-20)),math.max(1,math.min(600,sh-20))
+    local w,h=math.max(1,math.min(1180,sw-30)),math.max(1,math.min(680,sh-30))
     local o=ISPanel.new(self,math.max(0,(sw-w)/2),math.max(0,(sh-h)/2),w,h)
     o.player=player; o.frequency=frequency; o.moveWithMouse=true
     o.backgroundColor=rgba(C.bg); o.borderColor=rgba(C.line)
@@ -52,23 +97,32 @@ end
 
 function MeeksRadio.Listener:createChildren()
     ISPanel.createChildren(self)
-    local gap=20; local column=math.floor((self.width-60)/2); local right=40+column
-    local listBottom=self.height-112
-    self.history=ISScrollingListBox:new(20,122,column,listBottom-122)
-    self.history:initialise(); self.history.itemheight=30; self:addChild(self.history)
-    self.tracks=ISScrollingListBox:new(right,122,column,math.max(130,math.floor((listBottom-140)/2)))
-    self.tracks:initialise(); self.tracks.itemheight=26; self:addChild(self.tracks)
-    local requestsY=self.tracks.y+self.tracks.height+42
-    self.requests=ISScrollingListBox:new(right,requestsY,column,math.max(70,listBottom-requestsY))
-    self.requests:initialise(); self.requests.itemheight=26; self:addChild(self.requests)
-    self.requestButton=button(self,right,self.height-94,math.floor(column*.30),"REQUEST",self.onRequest)
-    self.favoriteButton=button(self,right+math.floor(column*.31),self.height-94,math.floor(column*.22),"FAVORITE",self.onFavorite)
+    local margin,gap=24,16
+    local leftW=math.floor((self.width-(margin*2)-gap)*0.56)
+    local right=margin+leftW+gap
+    local rightW=self.width-margin-right
+    local listTop,listBottom=206,self.height-154
+    self.history=ISScrollingListBox:new(margin,listTop,leftW,listBottom-listTop)
+    self.history:initialise(); self.history.font=UIFont.Small; self.history.itemheight=math.max(54,listFontHeight(UIFont.Small)*2+10); self.history.wrapLines=2; styleList(self.history); self:addChild(self.history)
+    local rightSpace=listBottom-listTop
+    self.tracks=ISScrollingListBox:new(right,listTop,rightW,math.max(92,math.floor((rightSpace-44)/2)))
+    self.tracks:initialise(); self.tracks.font=UIFont.Small; self.tracks.itemheight=24; styleList(self.tracks); self:addChild(self.tracks)
+    local requestsY=self.tracks.y+self.tracks.height+36
+    self.requests=ISScrollingListBox:new(right,requestsY,rightW,math.max(70,listBottom-requestsY))
+    self.requests:initialise(); self.requests.font=UIFont.Small; self.requests.itemheight=24; styleList(self.requests); self:addChild(self.requests)
+    local actionY=self.height-140
+    local actionGap=8
+    local actionW=math.floor((rightW-(actionGap*3))/4)
+    self.requestButton=button(self,right,actionY,actionW,"REQUEST",self.onRequest)
+    self.favoriteButton=button(self,right+actionW+actionGap,actionY,actionW,"FAVORITE",self.onFavorite)
     local allowed=stationPermission(self.frequency)
     if allowed then
-        self.approveButton=button(self,right+math.floor(column*.54),self.height-94,math.floor(column*.21),"APPROVE",self.onApprove)
-        self.rejectButton=button(self,right+math.floor(column*.76),self.height-94,math.floor(column*.23),"REJECT",self.onReject)
+        self.operationsButton=button(self,margin,actionY,180,"OPERATIONS",self.onOperations)
+        self.approveButton=button(self,right+(actionW+actionGap)*2,actionY,actionW,"APPROVE",self.onApprove)
+        self.rejectButton=button(self,right+(actionW+actionGap)*3,actionY,actionW,"REJECT",self.onReject)
     end
-    self.closeButton=button(self,self.width-152,self.height-40,132,"CLOSE",self.close)
+    self.topCloseButton=button(self,self.width-52,16,28,"X",self.close)
+    self.closeButton=button(self,self.width-166,self.height-48,142,"CLOSE",self.close)
     self:refresh()
 end
 
@@ -104,39 +158,54 @@ end
 function MeeksRadio.Listener:prerender()
     ISPanel.prerender(self)
     local station=MeeksRadio.Config.stations[self.frequency] or {}
-    self:drawRect(4,4,self.width-8,30,1,C.accent[1],C.accent[2],C.accent[3])
-    self:drawText("RADIO FREQUENCIES - LISTENER // "..C.name,12,10,C.titleText[1],C.titleText[2],C.titleText[3],1,UIFont.Small)
-    self:drawRect(12,40,self.width-24,58,1,C.panel[1],C.panel[2],C.panel[3])
-    self:drawText((station.name or "UNKNOWN").." // "..string.format("%.1f MHz",self.frequency/1000),20,48,C.text[1],C.text[2],C.text[3],1,UIFont.Medium)
+    self:drawRect(0,0,self.width,68,1,C.panel[1],C.panel[2],C.panel[3])
+    self:drawRect(0,67,self.width,1,1,C.line[1],C.line[2],C.line[3])
+    self:drawText("RADIO FREQUENCIES // COMMAND CENTER",22,20,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawText("STATUS: ONLINE",22,44,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
+    self:drawText("LISTENER ACCESS",174,44,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawTextRight("BUILD 42",self.width-64,20,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawText("RADIO FREQUENCIES",22,84,C.text[1],C.text[2],C.text[3],1,UIFont.Large)
+    self:drawText("LISTENER",24,116,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawTextRight(station.name or "UNKNOWN",self.width-24,80,C.text[1],C.text[2],C.text[3],1,UIFont.Medium)
+    self:drawTextRight(string.format("%.1f MHz",self.frequency/1000),self.width-24,108,C.accent[1],C.accent[2],C.accent[3],1,UIFont.Medium)
+    local state=self.state or {}
+    local current=state.currentTrackId and MeeksRadio.getTrack(state.currentTrackId) or nil
+    local nowPlaying=(current and ((current.title or current.id).." // "..(current.artist or "UNKNOWN ARTIST"))) or "OFF AIR // WAITING FOR BROADCAST"
+    self:drawTextCentre(fitText(nowPlaying,UIFont.Small,420),self.width/2,90,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
     local playbackStatus=MeeksRadio.ClientPlaybackStatus or {}
     local waiting=playbackStatus.waitingForNext==true and playbackStatus.frequency==self.frequency and playbackStatus.trackId==(self.state and self.state.currentTrackId)
     if waiting then
-        self:drawTextCentre("TUNED IN - CURRENT BROADCAST ALREADY IN PROGRESS",self.width/2,68,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
-        self:drawTextCentre("AUDIO BEGINS WITH NEXT TRACK",self.width/2,84,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+        self:drawTextCentre("TUNED IN // AUDIO BEGINS WITH NEXT TRACK",self.width/2,140,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
+    elseif state.currentTrackId and state.endsAt then
+        local now=getTimestamp and getTimestamp() or os.time()
+        local remaining=math.max(0,math.floor(tonumber(state.endsAt)-now))
+        self:drawTextCentre(string.format("%02d:%02d REMAINING // SERVER SYNCHRONIZED",math.floor(remaining/60),remaining%60),self.width/2,140,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
     end
-    self:drawText("BROADCAST HISTORY",20,102,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
-    self:drawText("APPROVED TRACKS",self.tracks.x,102,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
-    self:drawText("PLAYER REQUESTS",self.requests.x,self.requests.y-20,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    self:drawRectBorder(22,158,self.history.width+4,self.history.height+50,0.9,C.line[1],C.line[2],C.line[3])
+    self:drawRectBorder(self.tracks.x-2,158,self.tracks.width+4,self.history.height+50,0.9,C.line[1],C.line[2],C.line[3])
+    self:drawText("BROADCAST HISTORY",24,174,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    self:drawText("APPROVED TRACKS",self.tracks.x,174,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
+    self:drawText("PLAYER REQUESTS",self.requests.x,self.requests.y-24,C.label[1],C.label[2],C.label[3],1,UIFont.Small)
     local receiver=MeeksRadio.activeRadioReceiver and MeeksRadio.activeRadioReceiver(self.player,false) or nil
     local allowed,reason=stationPermission(self.frequency)
     local reception=receiver and receiver.label or "NO ACTIVE RECEIVER"
-    self:drawText(fitText("RECEPTION: "..reception.." // ACCESS: "..(allowed and "DJ" or "LISTENER").." ("..reason..")",UIFont.Small,self.width-190),20,self.height-36,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
+    self:drawText(fitText("RECEPTION: "..reception.." // ACCESS: "..(allowed and "DJ" or "LISTENER").." ("..reason..")",UIFont.Small,self.width-220),24,self.height-40,C.muted[1],C.muted[2],C.muted[3],1,UIFont.Small)
     local selected=self.history.items[self.history.selected]
     if selected and selected.item then
-        self:drawText(fitText("DETAIL: "..tostring(selected.item.text or ""),UIFont.Small,self.history.width),20,self.height-58,C.text[1],C.text[2],C.text[3],1,UIFont.Small)
+        local detailLines=wrapText("DETAIL: "..tostring(selected.item.text or ""),UIFont.Small,self.width-190,2)
+        local detailLineHeight=listFontHeight(UIFont.Small)
+        for index,line in ipairs(detailLines) do
+            self:drawText(fitText(line,UIFont.Small,self.width-220),24,self.height-92+((index-1)*detailLineHeight),C.text[1],C.text[2],C.text[3],1,UIFont.Small)
+        end
     end
-    local state=self.state or {}
-    if state.currentTrackId and state.endsAt then
-        local now=getTimestamp and getTimestamp() or os.time()
-        local remaining=math.max(0,math.floor(tonumber(state.endsAt)-now))
-        self:drawTextRight("NOW PLAYING: "..trackTitle(state.currentTrackId).." // "..string.format("%02d:%02d",math.floor(remaining/60),remaining%60).." REMAINING",self.width-20,38,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
-    end
+    self:drawText("ONLINE",24,self.height-26,C.live[1],C.live[2],C.live[3],1,UIFont.Small)
 end
 
 function MeeksRadio.Listener:onRequest()
     local selected=self.tracks.items[self.tracks.selected]
-    local active=MeeksRadio.activeRadioFrequency and MeeksRadio.activeRadioFrequency(self.player,true) or nil
-    if selected then sendClientCommand(MeeksRadio.Config.module,"requestTrack",{frequency=self.frequency,receiverFrequency=active,trackId=selected.item.id}) end
+    -- The selected Listener station is authoritative for a request. Audio
+    -- playback still requires a powered receiver tuned to this frequency.
+    if selected then sendClientCommand(MeeksRadio.Config.module,"requestTrack",{frequency=self.frequency,receiverFrequency=self.frequency,trackId=selected.item.id}) end
 end
 function MeeksRadio.Listener:onFavorite()
     local selected=self.tracks.items[self.tracks.selected]
@@ -158,6 +227,11 @@ end
 function MeeksRadio.Listener:onReject()
     local selected=self.requests.items[self.requests.selected]
     if selected then sendClientCommand(MeeksRadio.Config.module,"rejectRequest",{frequency=self.frequency,index=selected.item.index}) end
+end
+function MeeksRadio.Listener:onOperations()
+    local player,frequency=self.player,self.frequency
+    self:close()
+    if MeeksRadio.Console then MeeksRadio.Console.open(player,frequency) end
 end
 function MeeksRadio.Listener:close()
     self:setVisible(false); self:removeFromUIManager(); MeeksRadio.Listener.instance=nil
