@@ -5,7 +5,8 @@ require "MeeksRadio/Listener"
 
 local Config = MeeksRadio.Config
 local stationStates = {}
-local playback = { frequency = nil, trackId = nil, handle = nil, emitter = nil }
+local playback = { frequency = nil, trackId = nil, startedAt = nil, handle = nil, emitter = nil }
+local playbackStatus = { waitingForNext = false, frequency = nil, trackId = nil }
 local permissions = {
     isDj = false, isAdmin = false, catalogMatch = true, protocolMatch = true,
     helloAcknowledged = false, serverCatalogVersion = nil, serverProtocolVersion = nil,
@@ -15,6 +16,7 @@ local hello = { lastSentAt = 0, retrySeconds = 5 }
 local lastBroadcastId = 0
 MeeksRadio.ClientStationStates = stationStates
 MeeksRadio.ClientPermissions = permissions
+MeeksRadio.ClientPlaybackStatus = playbackStatus
 
 local detection = { checkedAt = 0, frequency = nil, receiver = nil }
 
@@ -112,9 +114,9 @@ end
 
 local function stopPlayback()
     if playback.handle and playback.emitter then
-        pcall(function() playback.emitter:stopSound(playback.handle) end)
+        pcall(function() if playback.handle and playback.handle.stop then playback.handle:stop() elseif playback.emitter and playback.emitter.StopSound then playback.emitter:StopSound(playback.handle) end end)
     end
-    playback = { frequency = nil, trackId = nil, handle = nil, emitter = nil }
+    playback = { frequency = nil, trackId = nil, startedAt = nil, handle = nil, emitter = nil }
 end
 
 local function updatePlayback()
@@ -123,24 +125,41 @@ local function updatePlayback()
     local s = frequency and stationStates[frequency] or nil
     local wanted = s and s.currentTrackId or nil
 
-    if playback.frequency == frequency and playback.trackId == wanted then return end
+    local wantedStartedAt = s and tonumber(s.startedAt) or nil
+    if playback.frequency == frequency and playback.trackId == wanted and
+       playback.startedAt == wantedStartedAt then return end
     stopPlayback()
-    if not player or not frequency or not wanted then return end
+    if not player or not frequency or not wanted then
+        playbackStatus.waitingForNext = false
+        playbackStatus.frequency = frequency
+        playbackStatus.trackId = nil
+        return
+    end
 
     local track = MeeksRadio.getTrack(wanted)
     if not track then return end
 
     -- Build 42 Lua audio does not expose a dependable synchronized seek here.
-    -- A listener already tuned when the state arrives starts the track; a late
-    -- listener waits for the next authoritative transition.
+    -- Start only inside the server transition window. A client tuning in late
+    -- waits for the next transition instead of hearing the song from its start
+    -- while established listeners are already farther ahead.
     local clientNow = getTimestamp and getTimestamp() or (s.serverTime or 0)
     local elapsed = math.max(0, clientNow - (s.startedAt or 0))
-    if elapsed > (tonumber(Config.playbackStartGraceSeconds) or 2) then return end
+    if elapsed > (tonumber(Config.playbackStartGraceSeconds) or 2) then
+        playback = { frequency = frequency, trackId = wanted, startedAt = wantedStartedAt, handle = nil, emitter = nil }
+        playbackStatus.waitingForNext = true
+        playbackStatus.frequency = frequency
+        playbackStatus.trackId = wanted
+        return
+    end
 
-    local emitter = player:getEmitter()
-    local ok, handle = pcall(function() return emitter:playSound(track.sound) end)
-    if ok then
-        playback = { frequency = frequency, trackId = wanted, handle = handle, emitter = emitter }
+    local emitter = getSoundManager()
+    local ok, handle = pcall(function() return emitter:PlaySound(track.sound, false, 1.0) end)
+    if ok and handle then
+        playbackStatus.waitingForNext = false
+        playbackStatus.frequency = frequency
+        playbackStatus.trackId = wanted
+        playback = { frequency = frequency, trackId = wanted, startedAt = wantedStartedAt, handle = handle, emitter = emitter }
         local station = Config.station(frequency)
         local volume = station and tonumber(station.volume) or nil
         if handle and volume then
@@ -218,6 +237,14 @@ local function requestHello()
     sendClientCommand(Config.module, "hello", { catalogVersion = Config.catalogVersion, protocolVersion = Config.protocolVersion })
 end
 
+local function requestActiveStation()
+    local player = getPlayer()
+    local frequency = activeRadioFrequency(player, true)
+    if frequency then
+        sendClientCommand(Config.module, "status", { frequency = frequency })
+    end
+end
+
 local function updateConnection()
     if permissions.helloAcknowledged then return end
     local now = getTimestamp and getTimestamp() or os.time()
@@ -228,3 +255,4 @@ Events.OnServerCommand.Add(onServerCommand)
 Events.OnPlayerUpdate.Add(updatePlayback)
 Events.OnPlayerUpdate.Add(updateConnection)
 Events.OnCreatePlayer.Add(requestHello)
+Events.OnCreatePlayer.Add(requestActiveStation)

@@ -2,7 +2,7 @@
 
 Server-authoritative music, announcements, emergency alerts, lore, events, and community updates delivered through configured Project Zomboid radio frequencies.
 
-Current mod version: **0.5.0** (protocol v5, catalog `3-ghosted`).
+Current mod version: **0.9.1** (protocol v6, catalog `3-ghosted`).
 
 ## Status
 
@@ -88,7 +88,7 @@ Server-side mods can safely publish events after Radio Frequencies has loaded:
 
 ```lua
 if MeeksRadio and MeeksRadio.ServerAPI then
-    MeeksRadio.ServerAPI.broadcast(101200, "event", "Survivor League season results are available.", "SurvivorLeague")
+    MeeksRadio.ServerAPI.broadcast(102800, "event", "Survivor League season results are available.", "SurvivorLeagueCommunity")
 end
 ```
 
@@ -118,6 +118,15 @@ gh repo create meeks-radio --source=. --private --push
 Code is provided under the MIT License. This repository currently bundles the Radio Frequencies test signal and `Ghosted` audio used by the catalog. Any additional audio requires explicit distribution rights; the MIT code license does not automatically grant rights to third-party audio.
 
 ## Changelog
+
+### 0.9.1
+
+- standardizes Meeks FM and the server-start announcement on 102.8 MHz;
+- adds responsive layouts for the listener and administrator interfaces;
+- adds selectable Project Zomboid, Meeks Protocol, and Military themes with Meeks Protocol as the default;
+- improves Build 42 audio stop, transition-window synchronization, queue rotation, skip, and stop behavior;
+- sends active station state when a player is created and removes temporary debug logging;
+- retains multiplayer synchronization protocol v6.
 
 ### 0.5.0
 

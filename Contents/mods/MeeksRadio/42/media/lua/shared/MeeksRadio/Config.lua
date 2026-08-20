@@ -2,7 +2,10 @@ MeeksRadio = MeeksRadio or {}
 
 MeeksRadio.Config = {
     module = "MeeksRadio",
-    protocolVersion = 5,
+    protocolVersion = 6,
+    -- Fallback when the Sandbox option is unavailable: 1 Project Zomboid,
+    -- 2 Meeks Protocol, 3 Military.
+    interfaceTheme = 2,
     frequencyTolerance = 0.01,
     requestCooldownSeconds = 2,
     maxQueueLength = 20,
@@ -10,7 +13,7 @@ MeeksRadio.Config = {
     maxTrackDurationSeconds = 3600,
     -- Without a stable seek API, playback may only begin near the server's
     -- authoritative track transition. Later listeners wait for the next one.
-    playbackStartGraceSeconds = 2,
+    playbackStartGraceSeconds = 4,
     maxTimestampSkewSeconds = 300,
     maxBroadcastLength = 240,
     broadcastCooldownSeconds = 10,
@@ -28,7 +31,7 @@ MeeksRadio.Config = {
     allowWorldRadios = true,
     allowVehicleRadios = true,
     stations = {
-        [101200] = { name = "Meeks FM", location = "Community Network", volume = 0.8, allowedDjs = {} },
+        [102800] = { name = "Meeks FM", location = "Community Network", volume = 0.8, allowedDjs = {} },
         [104600] = { name = "Protocol Radio", location = "Administration", volume = 0.8, allowedDjs = {} },
         [107900] = { name = "Emergency Override", location = "Countywide", volume = 1.0, allowedDjs = {} },
     },
@@ -45,7 +48,7 @@ MeeksRadio.Config = {
         -- {
         --     id = "community_reminder",
         --     enabled = true,
-        --     frequency = 101200,
+        --     frequency = 102800,
         --     kind = "community",
         --     text = "Community meeting begins at the Protocol Center soon.",
         --     initialDelaySeconds = 300,
@@ -54,13 +57,13 @@ MeeksRadio.Config = {
     },
     -- One-time entries use a Unix timestamp (UTC) and fire once per save.
     oneTimeBroadcasts = {
-        -- { id="launch_event", enabled=true, frequency=101200, kind="event",
+        -- { id="launch_event", enabled=true, frequency=102800, kind="event",
         --   text="The launch event is beginning now.", at=1787072400 },
     },
     -- DJs must still be granted. When this list is non-empty, non-admin DJs
     -- may operate only during a matching UTC window on the matching station.
     djShifts = {
-        -- { username="ExampleDJ", frequency=101200, startsAt=1787072400, endsAt=1787079600 },
+        -- { username="ExampleDJ", frequency=102800, startsAt=1787072400, endsAt=1787079600 },
     },
 }
 

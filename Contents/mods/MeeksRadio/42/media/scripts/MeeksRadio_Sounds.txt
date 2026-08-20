@@ -1,4 +1,4 @@
-module MeeksRadio
+module Base
 {
     sound MeeksRadio_TestSignal
     {

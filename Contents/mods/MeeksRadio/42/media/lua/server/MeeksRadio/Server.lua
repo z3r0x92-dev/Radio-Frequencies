@@ -128,6 +128,7 @@ local function stationState(frequency)
             frequency = frequencyKey,
             queue = {},
             locked = false,
+            stopped = false,
             current = nil,
             startedAt = nil,
             endsAt = nil,
@@ -152,6 +153,7 @@ local function publicStation(s)
     return {
         frequency = s.frequency,
         locked = s.locked,
+        stopped = s.stopped == true,
         currentTrackId = s.current and s.current.id or nil,
         startedAt = s.startedAt,
         endsAt = s.endsAt,
@@ -217,10 +219,40 @@ broadcast = function(s)
 end
 
 
-local function startNext(s)
+local function sortedCatalogTracks()
+    local tracks = {}
+    for _, track in pairs(MeeksRadio.Catalog or {}) do
+        if MeeksRadio.getTrack(track.id) then tracks[#tracks + 1] = track end
+    end
+    table.sort(tracks, function(a, b)
+        return string.lower(tostring(a.title or a.id)) < string.lower(tostring(b.title or b.id))
+    end)
+    return tracks
+end
+
+local function nextCatalogEntry(previousId)
+    local tracks = sortedCatalogTracks()
+    if #tracks == 0 then return nil end
+    local nextIndex = 1
+    for index, track in ipairs(tracks) do
+        if track.id == previousId then
+            nextIndex = (index % #tracks) + 1
+            break
+        end
+    end
+    local track = tracks[nextIndex]
+    return { id = track.id, duration = tonumber(track.duration), queuedBy = "station-autoplay" }
+end
+
+local function startNext(s, allowCatalogFallback)
+    local previousId = s.current and s.current.id or nil
     local entry = table.remove(s.queue, 1)
+    if not entry and allowCatalogFallback and s.stopped ~= true then
+        entry = nextCatalogEntry(previousId)
+    end
     s.current = entry
     if entry then
+        s.stopped = false
         s.startedAt = nowSeconds()
         s.endsAt = s.startedAt + entry.duration
     else
@@ -270,6 +302,7 @@ local function handleQueue(player, args)
     if s.locked and not isAdmin(player) then return reject(player, "Station is locked") end
     if #s.queue >= Config.maxQueueLength then return reject(player, "Queue is full") end
     table.insert(s.queue, { id = track.id, duration = tonumber(track.duration), queuedBy = username(player) })
+    s.stopped = false
     audit(player, "queue add", tostring(s.frequency) .. " track=" .. tostring(track.id))
     if not s.current then startNext(s) else broadcast(s) end
 end
@@ -334,13 +367,15 @@ local function handleAdmin(player, command, args)
         broadcast(s)
     elseif command == "skip" then
         audit(player, "station skip", tostring(s.frequency))
-        startNext(s)
+        s.stopped = false
+        startNext(s, true)
     elseif command == "stop" then
         audit(player, "station stop", tostring(s.frequency))
         s.queue = {}
         s.current = nil
         s.startedAt = nil
         s.endsAt = nil
+        s.stopped = true
         broadcast(s)
     elseif command == "emergency" then
         local track = MeeksRadio.getTrack(args.trackId)
@@ -437,7 +472,7 @@ local function tickStations()
     if now <= lastTick then return end
     lastTick = now
     for _, s in pairs(state.stations) do
-        if s.current and s.endsAt and now >= s.endsAt then startNext(s) end
+        if s.current and s.endsAt and now >= s.endsAt then startNext(s, true) end
         if s.activeBulletin and tonumber(s.activeBulletin.expiresAt) and now >= tonumber(s.activeBulletin.expiresAt) then
             s.activeBulletin = nil
             broadcast(s)
@@ -495,6 +530,7 @@ local function sanitizeStation(s, frequency)
     local changed = false
     s.frequency = frequency
     s.locked = s.locked == true
+    s.stopped = s.stopped == true
     s.revision = math.max(0, math.floor(finiteNumber(s.revision) or 0))
     if type(s.bulletins) ~= "table" then
         s.bulletins = {}
@@ -630,7 +666,8 @@ local function sanitizePersistedState()
         if sanitizeStation(s, frequency) then changed = true end
         if not s.current and #s.queue > 0 then
             print("[Meeks Radio] Starting next valid queued track on " .. tostring(frequency))
-            startNext(s)
+            s.stopped = false
+            startNext(s, false)
             changed = true
         end
     end
@@ -680,7 +717,7 @@ end
 
 local function onServerStarted()
     if Config.autoBroadcastServerStart then
-        MeeksRadio.ServerAPI.broadcast(101200, "announcement", "Radio Frequencies is online. Monitor this station for server information.", "SERVER_START")
+        MeeksRadio.ServerAPI.broadcast(102800, "announcement", "Radio Frequencies is online. Monitor this station for server information.", "SERVER_START")
     end
 end
 

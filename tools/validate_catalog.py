@@ -80,15 +80,15 @@ for path, token in ((CLIENT, '"radioBroadcast"'), (SERVER, '"radioBroadcast"'), 
     if path.is_file() and token not in path.read_text(encoding="utf-8"):
         errors.append(f"broadcast protocol token missing from {path.relative_to(ROOT)}")
 
-if CONFIG.is_file() and not re.search(r"\bprotocolVersion\s*=\s*5\b", CONFIG.read_text(encoding="utf-8")):
-    errors.append("protocolVersion is not 5")
+if CONFIG.is_file() and not re.search(r"\bprotocolVersion\s*=\s*6\b", CONFIG.read_text(encoding="utf-8")):
+    errors.append("protocolVersion is not 6")
 
 build_info = BUILD / "mod.info"
-if build_info.is_file() and "version=0.5.0" not in build_info.read_text(encoding="utf-8"):
-    errors.append("Build 42 mod.info version is not 0.5.0")
+if build_info.is_file() and "version=0.9.1" not in build_info.read_text(encoding="utf-8"):
+    errors.append("Build 42 mod.info version is not 0.9.1")
 root_info = MOD / "mod.info"
-if root_info.is_file() and "version=0.5.0" not in root_info.read_text(encoding="utf-8"):
-    errors.append("root mod.info version is not 0.5.0")
+if root_info.is_file() and "version=0.9.1" not in root_info.read_text(encoding="utf-8"):
+    errors.append("root mod.info version is not 0.9.1")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)

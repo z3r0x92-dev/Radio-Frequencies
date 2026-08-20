@@ -1,0 +1,39 @@
+Radio Frequencies v0.9.0 test build
+
+Changes
+- Uses the global sound manager for non-positional music playback.
+- Stops active audio safely on Build 42.
+- Identifies a playback instance by station, track, and server start time.
+- Shows late listeners that the current broadcast is already in progress and
+  that their audio will begin with the next track.
+- Starts tuned clients only within a four-second transition window so clients
+  do not begin the same song at different positions.
+- Sends the active station state when a player is created.
+- Skip advances to the queued track, or rotates to the next approved catalog
+  track when the queue is empty.
+- Stop clears the queue and keeps the station off-air until a track is added.
+- Natural track completion rotates through the approved catalog.
+- Corrects the server-start announcement from 101.2 MHz to 102.8 MHz.
+- Expands and reflows the admin console for larger interface/font scaling.
+- Removes temporary F7 and audio debug logging.
+- Adds one shared Sandbox theme selector for both interfaces:
+  Project Zomboid, Meeks Protocol, or Military.
+- Uses Meeks Protocol as the default black, magenta, and green hi-fi theme.
+- Bumps the mod to v0.9.0 while retaining synchronization protocol version 6.
+
+Theme selection
+Host settings > Sandbox options > Radio Frequencies > Interface Theme.
+Reload the server and reconnect clients after changing it.
+
+Multiplayer test
+1. Install the same package on the host and every client.
+2. Have two players power radios and tune both to 102.8 MHz.
+3. Start a track while both players are already tuned.
+4. Confirm both clients begin within normal network latency.
+5. Press Skip and confirm both clients change to the same next track.
+6. Press Stop and confirm both clients remain off-air.
+
+Build 42 limitation
+The exposed Lua audio API does not provide dependable synchronized seeking.
+A player who tunes in after the four-second transition window waits for the
+next track instead of starting the current track from the beginning out of sync.

@@ -1,6 +1,6 @@
 version=1
 id=3785340353
 title=Radio Frequencies
-description=A server-authoritative radio system for Meeks Protocol with portable, nearby world, and vehicle reception; music queues; categorized broadcasts; history; player requests; templates; one-time and recurring schedules; emergency cues; location stations; DJ shifts; and integration hooks.\n\nWorkshop ID: 3785340353\nMod ID: MeeksRadio
+description=A server-authoritative radio system for Meeks Protocol with portable, nearby world, and vehicle reception; synchronized music queues; categorized broadcasts; history; player requests; responsive selectable themes; emergency cues; location stations; DJ controls; and integration hooks.\n\nDefault station: Meeks FM 102.8 MHz\nWorkshop ID: 3785340353\nMod ID: MeeksRadio
 tags=Build 42;Multiplayer;Framework;Misc;Realistic
 visibility=unlisted

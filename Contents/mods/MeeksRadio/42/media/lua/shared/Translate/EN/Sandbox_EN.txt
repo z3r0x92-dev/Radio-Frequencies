@@ -1,0 +1,8 @@
+Sandbox_EN = {
+    Sandbox_MeeksRadio = "Radio Frequencies",
+    Sandbox_MeeksRadio_InterfaceTheme = "Interface Theme",
+    Sandbox_MeeksRadio_InterfaceTheme_tooltip = "Select the visual theme used by the Radio Frequencies admin and listener interfaces.",
+    Sandbox_MeeksRadio_InterfaceTheme_option1 = "Project Zomboid",
+    Sandbox_MeeksRadio_InterfaceTheme_option2 = "Meeks Protocol",
+    Sandbox_MeeksRadio_InterfaceTheme_option3 = "Military",
+}
